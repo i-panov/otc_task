@@ -1,0 +1,104 @@
+﻿@{
+    ViewData["Title"] = "Редактирование данных";
+}
+
+<style>
+    #list {
+        margin-top: 30px;
+        background-color: lightblue;
+        padding-top: 5px;
+        width: 915px;
+    }
+
+    #list form {
+        padding-bottom: 5px;
+    }
+</style>
+
+<p id="app"></p>
+
+<script>
+    function buildUrl(base, params) {
+        let url = new URL(base);
+        
+        for (const param in params) {
+            const value = params[param];
+
+            if (value)
+                url.searchParams.append(param, value);
+        }
+
+        return url.toString();
+    }
+
+    function createForm(person = {}) {
+        const parts = [
+            `<input name="lastName" placeholder="Фамилия" required value="${person.lastName || ''}">`,
+            `<input name="firstName" placeholder="Имя" required value="${person.firstName || ''}">`,
+            `<input name="middleName" placeholder="Отчество" required value="${person.middleName || ''}">`,
+            `<input name="age" placeholder="Возраст" required type="number" min="0" max="200" style="min-width: 100px" value="${person.age || ''}">`,
+            `<input type="submit" value="${person.id ? 'Обновить' : 'Добавить'}">`,
+            `<input type="reset">`,
+        ];
+
+        if (person.id) {
+            parts.unshift(`<input name="id" type="hidden" value="${person.id}">`);
+            parts.push(`<button type="button" onclick="remove(this.form)">Удалить</button>`);
+        }
+
+        let action = buildUrl(window.location.href + "api/person/save");
+        return `<form method="post" action="${action}" onsubmit="${person.id ? 'update(this)' : 'add(this)'};return false">\n${parts.join("\n")}\n</form>`;
+    }
+
+    function addRecord(person) {
+        document.getElementById("list").innerHTML += createForm(person);
+    }
+
+    window.onload = () => {
+        document.getElementById("app").innerHTML = createForm() + `<div id="list"></div>`;
+        fetch("/api/person/list").then(r => r.json()).then(list => list.forEach(addRecord));
+    };
+
+    function getInputValues(form) {
+        const inputs = [...form.getElementsByTagName('input')];
+        const data = inputs.reduce((acc, input) => {
+            acc[input.name] = input.value;
+            return acc;
+        }, {});
+        delete data[""];
+        return data;
+    }
+
+    function fetchEx(url, urlParams, method = 'post', data = null) {
+        return fetch(buildUrl(url, urlParams), {
+            method: method,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }, 
+            body: JSON.stringify(data),
+        });
+    }
+
+    function add(form) {
+        const person = getInputValues(form);
+
+        fetchEx(form.action, {}, 'post', person)
+            .then(responce => responce.json())
+            .then(result => {
+                person.id = result.id;
+                addRecord(person);
+            });
+    }
+
+    function update(form) {
+        const person = getInputValues(form);
+        fetchEx(form.action, {}, 'post', person).then(console.log);
+    }
+
+    function remove(form) {
+        const person = getInputValues(form);
+        fetchEx(window.location.href + "api/person/delete", {id: person.id}, 'delete').then(console.log);
+        form.parentNode.removeChild(form);
+    }
+</script>

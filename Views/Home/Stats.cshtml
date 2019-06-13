@@ -1,0 +1,26 @@
+﻿@{
+    ViewData["Title"] = "Статистика";
+}
+<h1>@ViewData["Title"]</h1>
+
+<p>
+    <select id="action" onchange="actionSelected()">
+        <option value="" disabled selected></option>
+        <option value="averageAge">Средний возраст</option>
+        <option value="count">Общее количество пользователей</option>
+    </select>
+    <span id="result" style="margin-left: 20px; padding: 5px; background-color: lightblue">Ничего не выбрано</span>
+</p>
+
+<script>
+    function actionSelected() {
+        let action = document.getElementById("action").value;
+
+        fetch(`/api/person/${action}`)
+            .then(async response => {
+                const result = await response.json();
+                document.getElementById("result").innerHTML = response.status == 200 ? result.value : result.error;
+            })
+            .catch(alert);
+    }
+</script>
